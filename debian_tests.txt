@@ -1,0 +1,8 @@
+autoconf
+automake
+autotools-dev
+gcc
+git
+libtool
+make
+wget
