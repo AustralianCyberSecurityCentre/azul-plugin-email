@@ -182,7 +182,7 @@ class AzulPluginMimeDecoder(BinaryPlugin):
             try:
                 decoded = header.decode_header(content_filename)
                 content_filename = "".join([s.decode(t or "ascii") for s, t in decoded])
-            except Exception:  # noqa: S110 # nosec B110
+            except Exception:  # noqa: S110 # noqa: S110
                 # just use the raw string if it doesn't decode
                 pass
 
