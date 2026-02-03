@@ -180,7 +180,8 @@ class Attachment:
         # Otherwise just make something up!
         if filename is None:
             r = "".join(
-                random.choice(string.ascii_uppercase + string.digits) for _ in range(5)  # noqa: S311 # nosec B311
+                random.choice(string.ascii_uppercase + string.digits)
+                for _ in range(5)  # noqa: S311 # nosec B311
             )
             filename = "UnknownFilename " + r + ".bin"
         # ensure there's no shenanigans with path chars
