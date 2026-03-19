@@ -81,7 +81,7 @@ RUN apt-get update && \
 # contains a number of bugs for office and archive file types
 # Install updated libmagic
 ARG FILE_GIT=https://github.com/file/file
-ARG FILE_TAG=FILE5_46
+ARG FILE_TAG=FILE5_47
 RUN git clone --depth 1 --branch $FILE_TAG $FILE_GIT /go/file && \
     cd /go/file/ && \
     autoreconf -f -i && \
