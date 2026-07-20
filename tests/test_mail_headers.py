@@ -35,8 +35,7 @@ class TestExecute(test_template.TestPlugin):
                 state=State(State.Label.COMPLETED),
                 events=[
                     Event(
-                        entity_type="binary",
-                        entity_id="aaa11162e56abeda3e94b7bf3631ea750b373caafec95c4c2548de57ffda6b69",
+                        sha256="aaa11162e56abeda3e94b7bf3631ea750b373caafec95c4c2548de57ffda6b69",
                         features={
                             "mail_address": [FV("person1@email1.com"), FV("person2@email2.com")],
                             "mail_agent": [FV("FoxMail 3.11 Release [xx]")],
@@ -75,8 +74,7 @@ class TestExecute(test_template.TestPlugin):
                 state=State(State.Label.COMPLETED),
                 events=[
                     Event(
-                        entity_type="binary",
-                        entity_id="7a32d685fc3a9c9a6fe2c2fc9dc03a7e340a068d78ab3b48313532d58ab9d1b7",
+                        sha256="7a32d685fc3a9c9a6fe2c2fc9dc03a7e340a068d78ab3b48313532d58ab9d1b7",
                         features={
                             "mail_address": [FV("99b2ca30b@87556.ru"), FV("caf9@14252ef73f1ba9.ru")],
                             "mail_date": [FV(datetime.datetime(2021, 10, 11, 22, 14, 31))],

@@ -1,10 +1,9 @@
 """This module defines the template for EMail parsing plugins."""
 
-import email
 import re
 import time
 from datetime import datetime
-from email import header
+from email import header, utils
 
 from azul_runner import BinaryPlugin, Feature, FeatureType, FeatureValue, Uri
 
@@ -41,7 +40,7 @@ class AzulPluginMailParser(BinaryPlugin):
         if m:
             features["mail_timezone"] = m.group(1)
 
-        st = email.utils.parsedate_tz(dstring)
+        st = utils.parsedate_tz(dstring)
         if st:
             dt = datetime.fromtimestamp(time.mktime(st[0:-1]) - st[-1])
             features["mail_date"] = dt
@@ -112,7 +111,7 @@ class AzulPluginMailParser(BinaryPlugin):
                     features.setdefault(feat, []).append(feat_value)
 
             # address extraction
-            for _, addr in email.utils.getaddresses(raw):
+            for _, addr in utils.getaddresses(raw):
                 # sanity check that it looks like an email address
                 if "@" not in addr:
                     continue

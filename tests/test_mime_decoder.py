@@ -7,14 +7,13 @@ encoded content.
 """
 
 from azul_runner import (
+    DataLabel,
     FV,
     Event,
     EventData,
     EventParent,
-    Filepath,
     JobResult,
     State,
-    Uri,
     test_template,
 )
 
@@ -43,8 +42,7 @@ class TestExecute(test_template.TestPlugin):
                 state=State(State.Label.COMPLETED),
                 events=[
                     Event(
-                        entity_type="binary",
-                        entity_id="aaa11162e56abeda3e94b7bf3631ea750b373caafec95c4c2548de57ffda6b69",
+                        sha256="aaa11162e56abeda3e94b7bf3631ea750b373caafec95c4c2548de57ffda6b69",
                         data=[
                             EventData(
                                 hash="834a9c7df9239a4f8de00e8519f5b9f9f5c04c03d910680341fb143641fe45f5", label="text"
@@ -64,16 +62,14 @@ class TestExecute(test_template.TestPlugin):
                     ),
                     Event(
                         parent=EventParent(
-                            entity_type="binary",
-                            entity_id="aaa11162e56abeda3e94b7bf3631ea750b373caafec95c4c2548de57ffda6b69",
+                            sha256="aaa11162e56abeda3e94b7bf3631ea750b373caafec95c4c2548de57ffda6b69",
                         ),
-                        entity_type="binary",
-                        entity_id="7a6b78a4662ceca77e76cd7f2bc08f69a588fc7547db60eb77eb4c328a04c0a8",
+                        sha256="7a6b78a4662ceca77e76cd7f2bc08f69a588fc7547db60eb77eb4c328a04c0a8",
                         relationship={"action": "extracted", "encoding": "base64"},
                         data=[
                             EventData(
                                 hash="7a6b78a4662ceca77e76cd7f2bc08f69a588fc7547db60eb77eb4c328a04c0a8",
-                                label="content",
+                                label=DataLabel.CONTENT,
                             ),
                             EventData(
                                 hash="08f212365e49d238b484de2f9bf4ace4d8d7e88f82d6f57b349e1277cc834259",
@@ -107,7 +103,7 @@ class TestExecute(test_template.TestPlugin):
                     ),
                 )
             ],
-            config={"appended_data_as_child": True},
+            config={"appended_data_as_child": True},  # ty: ignore[invalid-argument-type]
         )
         self.assertJobResult(
             result,
@@ -115,8 +111,7 @@ class TestExecute(test_template.TestPlugin):
                 state=State(State.Label.COMPLETED),
                 events=[
                     Event(
-                        entity_type="binary",
-                        entity_id="aaa11162e56abeda3e94b7bf3631ea750b373caafec95c4c2548de57ffda6b69",
+                        sha256="aaa11162e56abeda3e94b7bf3631ea750b373caafec95c4c2548de57ffda6b69",
                         data=[
                             EventData(
                                 hash="834a9c7df9239a4f8de00e8519f5b9f9f5c04c03d910680341fb143641fe45f5", label="text"
@@ -136,16 +131,14 @@ class TestExecute(test_template.TestPlugin):
                     ),
                     Event(
                         parent=EventParent(
-                            entity_type="binary",
-                            entity_id="aaa11162e56abeda3e94b7bf3631ea750b373caafec95c4c2548de57ffda6b69",
+                            sha256="aaa11162e56abeda3e94b7bf3631ea750b373caafec95c4c2548de57ffda6b69",
                         ),
-                        entity_type="binary",
-                        entity_id="7a6b78a4662ceca77e76cd7f2bc08f69a588fc7547db60eb77eb4c328a04c0a8",
+                        sha256="7a6b78a4662ceca77e76cd7f2bc08f69a588fc7547db60eb77eb4c328a04c0a8",
                         relationship={"action": "extracted", "encoding": "base64"},
                         data=[
                             EventData(
                                 hash="7a6b78a4662ceca77e76cd7f2bc08f69a588fc7547db60eb77eb4c328a04c0a8",
-                                label="content",
+                                label=DataLabel.CONTENT,
                             ),
                             EventData(
                                 hash="08f212365e49d238b484de2f9bf4ace4d8d7e88f82d6f57b349e1277cc834259",
@@ -160,16 +153,14 @@ class TestExecute(test_template.TestPlugin):
                     ),
                     Event(
                         parent=EventParent(
-                            entity_type="binary",
-                            entity_id="aaa11162e56abeda3e94b7bf3631ea750b373caafec95c4c2548de57ffda6b69",
+                            sha256="aaa11162e56abeda3e94b7bf3631ea750b373caafec95c4c2548de57ffda6b69",
                         ),
-                        entity_type="binary",
-                        entity_id="11e4cd894398ff7082a80b224cc3f86eefa1b221c81b93d13786d578d9d0916c",
+                        sha256="11e4cd894398ff7082a80b224cc3f86eefa1b221c81b93d13786d578d9d0916c",
                         relationship={"action": "extracted", "type": "epilogue"},
                         data=[
                             EventData(
                                 hash="11e4cd894398ff7082a80b224cc3f86eefa1b221c81b93d13786d578d9d0916c",
-                                label="content",
+                                label=DataLabel.CONTENT,
                             )
                         ],
                     ),
@@ -202,8 +193,7 @@ class TestExecute(test_template.TestPlugin):
                 state=State(State.Label.COMPLETED),
                 events=[
                     Event(
-                        entity_type="binary",
-                        entity_id="d08e83ab9c2f68e46f59b6c3e0d6ec45d040f73f081e8d04183b9a196445f618",
+                        sha256="d08e83ab9c2f68e46f59b6c3e0d6ec45d040f73f081e8d04183b9a196445f618",
                         data=[
                             EventData(
                                 hash="4cbca66ff817230499cbb5112e3eda494a4b68293c19e7acf9e5fe8499356b57", label="text"
@@ -236,32 +226,28 @@ class TestExecute(test_template.TestPlugin):
                     ),
                     Event(
                         parent=EventParent(
-                            entity_type="binary",
-                            entity_id="d08e83ab9c2f68e46f59b6c3e0d6ec45d040f73f081e8d04183b9a196445f618",
+                            sha256="d08e83ab9c2f68e46f59b6c3e0d6ec45d040f73f081e8d04183b9a196445f618",
                         ),
-                        entity_type="binary",
-                        entity_id="3b79d4e7a8d91867e958ab89bd02af9e48b4047951207046705c1d7be55b882e",
+                        sha256="3b79d4e7a8d91867e958ab89bd02af9e48b4047951207046705c1d7be55b882e",
                         relationship={"action": "extracted", "encoding": "none"},
                         data=[
                             EventData(
                                 hash="3b79d4e7a8d91867e958ab89bd02af9e48b4047951207046705c1d7be55b882e",
-                                label="content",
+                                label=DataLabel.CONTENT,
                             )
                         ],
                         features={"mime_content_type": [FV("message/rfc822")]},
                     ),
                     Event(
                         parent=EventParent(
-                            entity_type="binary",
-                            entity_id="d08e83ab9c2f68e46f59b6c3e0d6ec45d040f73f081e8d04183b9a196445f618",
+                            sha256="d08e83ab9c2f68e46f59b6c3e0d6ec45d040f73f081e8d04183b9a196445f618",
                         ),
-                        entity_type="binary",
-                        entity_id="0f57baeb3070bf7a806f004ab61243aaf1b16f328e0c5f96d0c9128294d95b2c",
+                        sha256="0f57baeb3070bf7a806f004ab61243aaf1b16f328e0c5f96d0c9128294d95b2c",
                         relationship={"action": "extracted", "encoding": "base64"},
                         data=[
                             EventData(
                                 hash="0f57baeb3070bf7a806f004ab61243aaf1b16f328e0c5f96d0c9128294d95b2c",
-                                label="content",
+                                label=DataLabel.CONTENT,
                             ),
                             EventData(
                                 hash="dbb892ee04c9d011cd5ea6026d1a43d6147e37bebf30d36e8d1afc7f36947db0",
@@ -304,8 +290,7 @@ class TestExecute(test_template.TestPlugin):
                 state=State(State.Label.COMPLETED),
                 events=[
                     Event(
-                        entity_type="binary",
-                        entity_id="0dc315e0b3d9f4098ea5cac977b9814e3c6e9116cf296c1bbfcb3ab95c72ca99",
+                        sha256="0dc315e0b3d9f4098ea5cac977b9814e3c6e9116cf296c1bbfcb3ab95c72ca99",
                         features={
                             "mime_version": [FV("1.0")],
                             "mime_boundary": [FV("----=_NextPart_01CD27E7.8767FC40")],
@@ -342,8 +327,7 @@ class TestExecute(test_template.TestPlugin):
                 state=State(State.Label.COMPLETED),
                 events=[
                     Event(
-                        entity_type="binary",
-                        entity_id="8ad5920ebdb440e5fd72fc07f79896266f5b9d7c0638a5602676dad05c5f43ea",
+                        sha256="8ad5920ebdb440e5fd72fc07f79896266f5b9d7c0638a5602676dad05c5f43ea",
                         features={
                             "mime_version": [FV("1.0")],
                             "mime_boundary": [FV("----=_NextPart_000_0000_01D1E1EF.25988180")],
@@ -361,16 +345,14 @@ class TestExecute(test_template.TestPlugin):
                     ),
                     Event(
                         parent=EventParent(
-                            entity_type="binary",
-                            entity_id="8ad5920ebdb440e5fd72fc07f79896266f5b9d7c0638a5602676dad05c5f43ea",
+                            sha256="8ad5920ebdb440e5fd72fc07f79896266f5b9d7c0638a5602676dad05c5f43ea",
                         ),
-                        entity_type="binary",
-                        entity_id="75af436ad40613f3d2d1d6dd4e0d9954fad71284376282695ec3f6e94f997483",
+                        sha256="75af436ad40613f3d2d1d6dd4e0d9954fad71284376282695ec3f6e94f997483",
                         relationship={"action": "extracted", "encoding": "base64"},
                         data=[
                             EventData(
                                 hash="75af436ad40613f3d2d1d6dd4e0d9954fad71284376282695ec3f6e94f997483",
-                                label="content",
+                                label=DataLabel.CONTENT,
                             )
                         ],
                         features={
