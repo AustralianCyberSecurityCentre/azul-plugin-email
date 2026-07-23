@@ -9,6 +9,7 @@ Test the olemail plugin feature and attachment extract.
 import datetime
 
 from azul_runner import (
+    DataLabel,
     FV,
     Event,
     EventData,
@@ -45,8 +46,7 @@ class TestExecute(test_template.TestPlugin):
                 state=State(State.Label.COMPLETED),
                 events=[
                     Event(
-                        entity_type="binary",
-                        entity_id="b94e9620d883da9c8d445725e55793bbe51b5fc7828819eaea86245f10e566ae",
+                        sha256="b94e9620d883da9c8d445725e55793bbe51b5fc7828819eaea86245f10e566ae",
                         data=[
                             EventData(
                                 hash="655b7faff635b22dc04cd7772d023f85122897b3a17f8e6ceb1ef033a0ccba71", label="text"
@@ -114,16 +114,14 @@ class TestExecute(test_template.TestPlugin):
                     ),
                     Event(
                         parent=EventParent(
-                            entity_type="binary",
-                            entity_id="b94e9620d883da9c8d445725e55793bbe51b5fc7828819eaea86245f10e566ae",
+                            sha256="b94e9620d883da9c8d445725e55793bbe51b5fc7828819eaea86245f10e566ae",
                         ),
-                        entity_type="binary",
-                        entity_id="f83dab5e27d17dec0c491d4d8587f08b5b684b5782c7a91d529d9a891420829d",
+                        sha256="f83dab5e27d17dec0c491d4d8587f08b5b684b5782c7a91d529d9a891420829d",
                         relationship={"action": "extracted"},
                         data=[
                             EventData(
                                 hash="f83dab5e27d17dec0c491d4d8587f08b5b684b5782c7a91d529d9a891420829d",
-                                label="content",
+                                label=DataLabel.CONTENT,
                             ),
                             EventData(
                                 hash="13cb4fb56aac4bf9b7804a4deadfd3cde4d9f83f9655cd0ad3b9c5a657cfc7ff",
@@ -159,8 +157,7 @@ class TestExecute(test_template.TestPlugin):
                 state=State(State.Label.COMPLETED),
                 events=[
                     Event(
-                        entity_type="binary",
-                        entity_id="9676ca02b32c15bf47bcf4295131d807a2729c2d1cddc53c4d40b57aa6c6d32b",
+                        sha256="9676ca02b32c15bf47bcf4295131d807a2729c2d1cddc53c4d40b57aa6c6d32b",
                         data=[
                             EventData(
                                 hash="663a3268118c3cd710ebd73c79a59a9026308eec4a01a0ecb6cdc7f2004630ff", label="text"
@@ -198,8 +195,7 @@ class TestExecute(test_template.TestPlugin):
                 state=State(State.Label.COMPLETED),
                 events=[
                     Event(
-                        entity_type="binary",
-                        entity_id="e7e8a42e47ca609716010907f06f465b0f11c3b9e9949961781c9199c8a968f3",
+                        sha256="e7e8a42e47ca609716010907f06f465b0f11c3b9e9949961781c9199c8a968f3",
                         features={"processing_failure": [FV("Unable to parse OLE file: incomplete OLE sector")]},
                     )
                 ],
@@ -225,8 +221,7 @@ class TestExecute(test_template.TestPlugin):
                 state=State(State.Label.COMPLETED),
                 events=[
                     Event(
-                        entity_type="binary",
-                        entity_id="4ae594fc5c4708b3ab4e93dc52dfa3e373da4cd382500d544ef5f305e625b005",
+                        sha256="4ae594fc5c4708b3ab4e93dc52dfa3e373da4cd382500d544ef5f305e625b005",
                         data=[
                             EventData(
                                 hash="2ddacf3a16f73a1abf2a25955b45c5d342cc17ecefa21d7098b9092b8cb0727c", label="text"
@@ -284,16 +279,14 @@ class TestExecute(test_template.TestPlugin):
                     ),
                     Event(
                         parent=EventParent(
-                            entity_type="binary",
-                            entity_id="4ae594fc5c4708b3ab4e93dc52dfa3e373da4cd382500d544ef5f305e625b005",
+                            sha256="4ae594fc5c4708b3ab4e93dc52dfa3e373da4cd382500d544ef5f305e625b005",
                         ),
-                        entity_type="binary",
-                        entity_id="9a7368c9210f500fae07a432c2b56da62a5ba86991dcc0afa350a651ab34073e",
+                        sha256="9a7368c9210f500fae07a432c2b56da62a5ba86991dcc0afa350a651ab34073e",
                         relationship={"action": "extracted"},
                         data=[
                             EventData(
                                 hash="9a7368c9210f500fae07a432c2b56da62a5ba86991dcc0afa350a651ab34073e",
-                                label="content",
+                                label=DataLabel.CONTENT,
                             ),
                             EventData(
                                 hash="05b5636be7bb7606a4365460243ef3a4a9087ad7f5644763b98b3213bc15ccce",

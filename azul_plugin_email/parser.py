@@ -185,7 +185,7 @@ class Attachment:
             )
             filename = "UnknownFilename " + r + ".bin"
         # ensure there's no shenanigans with path chars
-        filename = os.basename(filename)
+        filename = os.path.basename(filename)
         with open(os.path.join(outpath, filename), "wb") as f:
             f.write(self.data)
             return f.name
@@ -220,9 +220,11 @@ class Message(olefile.OleFileIO):
         ascii_string = self._get_stream(filename + "001E")
         decoded_ascii = None
         try:
+            if ascii_string is None:
+                raise ValueError("Expected ascii_string to be bytes, got None")
             decoded_ascii = ascii_string.decode(encoding="iso-8859-1")
-        except Exception:
-            logger.info("ASCII decoding failed, either unicode will be used or the email can't be decoded.")
+        except Exception as e:
+            logger.info(f"ASCII decoding failed, either unicode will be used or the email can't be decoded: {e}")
         unicode_string = windows_unicode(self._get_stream(filename + "001F"))
         if ascii_string is None:
             return unicode_string
@@ -339,6 +341,8 @@ class Message(olefile.OleFileIO):
             # Extract from other fields
             # FUTURE: This could be  extracted from the recip folders.
             display = self._get_string_stream("__substg1.0_0E04")
+            if display is None:
+                raise ValueError("Expected display to be a string, got None") from None
             display = display.rstrip("\0")
             self._to = display
             return display
@@ -359,6 +363,8 @@ class Message(olefile.OleFileIO):
             # Extract from other fields
             # FUTURE: This could be  extracted from the recip folders.
             display = self._get_string_stream("__substg1.0_0E03")
+            if display is None:
+                raise ValueError("Expected display to be a string, got None") from None
             display = display.rstrip("\0")
             self._cc = display
             return display
@@ -404,8 +410,8 @@ class Message(olefile.OleFileIO):
         """Print debugging information about the message ole streams."""
         for dir_ in self.listdir():
             if dir_[-1].endswith("001E", "001F"):
-                print("Directory: " + str(dir_))
-                print("Contents: " + self._get_stream(dir_))
+                print(f"Directory: {str(dir_)}")
+                print(f"Contents: {self._get_stream(dir_)}")
 
 
 @click.command()

@@ -41,7 +41,7 @@ class AzulPluginOleMail(AzulPluginMailParser):
         Extracts attachment as children and features corresponding mail headers.
         """
         path = job.get_data().get_filepath()
-        features = {}
+        features: dict[str, str | int | list[str]] = {}
         try:
             msg = Message(path)
         except OSError as ex:

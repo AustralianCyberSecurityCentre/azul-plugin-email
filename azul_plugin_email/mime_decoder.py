@@ -144,7 +144,7 @@ class AzulPluginMimeDecoder(BinaryPlugin):
         if msg.epilogue and msg.epilogue.strip():
             features["tag"] = "trailing_data"
             # raise as child entity
-            if self.cfg.appended_data_as_child:
+            if self.cfg.appended_data_as_child:  # ty: ignore[unresolved-attribute] ty doesn't understand add_settings
                 self.add_child_with_data(
                     relationship={"action": "extracted", "type": "epilogue"},
                     data=msg.epilogue.encode(),
@@ -211,6 +211,9 @@ class AzulPluginMimeDecoder(BinaryPlugin):
             if not decoded_part:
                 continue
 
+            if not isinstance(decoded_part, bytes):
+                raise TypeError(f"Expected decoded_part to be a bytes, got {type(decoded_part)}")
+
             # hash the section
             h = sha256()
             h.update(decoded_part)
@@ -218,12 +221,12 @@ class AzulPluginMimeDecoder(BinaryPlugin):
 
             # no filename and is text/plain is most likely mail body text
             # raise as txt report so it gets indexed/etc.
-            if self.cfg.report_mail_bodies and not content_filename and content_type == "text/plain":
+            if self.cfg.report_mail_bodies and not content_filename and content_type == "text/plain":  # ty: ignore[unresolved-attribute] ty doesn't understand add_settings
                 # we don't want to publish just whitespace
                 if decoded_part.strip():
                     plain_text.append(decoded_part)
 
-            if self.cfg.report_mail_bodies and not content_filename and content_type == "text/html":
+            if self.cfg.report_mail_bodies and not content_filename and content_type == "text/html":  # ty: ignore[unresolved-attribute] ty doesn't understand add_settings
                 # some mail will only contain html body
                 soup = BeautifulSoup(decoded_part, features="html.parser")
                 text = soup.get_text().encode("utf-8")
@@ -231,7 +234,7 @@ class AzulPluginMimeDecoder(BinaryPlugin):
                     html_text.append(text)
 
             # not interested in items from the defeat list
-            if content_type in self.cfg.content_type_filter:
+            if content_type in self.cfg.content_type_filter:  # ty: ignore[unresolved-attribute] ty doesn't understand add_settings
                 continue
 
             # set up a dict for the child features
