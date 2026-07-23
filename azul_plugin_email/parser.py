@@ -218,13 +218,13 @@ class Message(olefile.OleFileIO):
             filename = "/".join(filename)
 
         ascii_string = self._get_stream(filename + "001E")
-        if ascii_string is None:
-            raise ValueError("Expected ascii_string to be bytes, got None") from None
         decoded_ascii = None
         try:
+            if ascii_string is None:
+                raise ValueError("Expected ascii_string to be bytes, got None")
             decoded_ascii = ascii_string.decode(encoding="iso-8859-1")
-        except Exception:
-            logger.info("ASCII decoding failed, either unicode will be used or the email can't be decoded.")
+        except Exception as e:
+            logger.info(f"ASCII decoding failed, either unicode will be used or the email can't be decoded: {e}")
         unicode_string = windows_unicode(self._get_stream(filename + "001F"))
         if ascii_string is None:
             return unicode_string
