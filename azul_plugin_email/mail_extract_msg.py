@@ -14,8 +14,8 @@ from extract_msg.msg_classes.meeting_related import MeetingRelated
 
 from azul_runner import DataLabel, Feature, FeatureType, Job, add_settings, cmdline_run, BinaryPlugin
 
-from helpers import get_words
-from template import AzulPluginMailParser
+from .helpers import get_words
+from .template import AzulPluginMailParser
 
 
 class AzulPluginMailExtractMsg(AzulPluginMailParser):
