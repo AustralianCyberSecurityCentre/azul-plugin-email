@@ -4,18 +4,29 @@ This plugin uses 'extract-msg' https://github.com/TeamMsgExtractor/msg-extractor
 decode and extract content and features from '.msg' files. 
 """
 from hashlib import sha256
+from datetime import datetime
+
 
 from extract_msg import openMsg
 from extract_msg.exceptions import UnsupportedMSGTypeError, UnrecognizedMSGTypeError
-from extract_msg.msg_classes.message import Message
+
 from extract_msg.msg_classes.message_base import MessageBase
-from extract_msg.msg_classes.calendar import Calendar
-from extract_msg.msg_classes.meeting_related import MeetingRelated
 
-from azul_runner import DataLabel, Feature, FeatureType, Job, add_settings, cmdline_run, BinaryPlugin
+from extract_msg.attachments.attachment_base import AttachmentBase
+from extract_msg.attachments.attachment import Attachment
+from extract_msg.attachments.broken_att import BrokenAttachment
+from extract_msg.attachments.custom_att import CustomAttachment
+from extract_msg.attachments.emb_msg_att import EmbeddedMsgAttachment
+from extract_msg.attachments.signed_att import SignedAttachment
+from extract_msg.attachments.unsupported_att import UnsupportedAttachment
+from extract_msg.attachments.web_att import WebAttachment
 
-from .helpers import get_words
-from .template import AzulPluginMailParser
+
+from azul_runner import DataLabel, Feature, FeatureType, Job, add_settings, cmdline_run
+
+from azul_plugin_email.helpers import get_words
+from azul_plugin_email.template import AzulPluginMailParser
+from azul_plugin_email.ms_oxprops_enum import MS_OXPROPS
 
 
 class AzulPluginMailExtractMsg(AzulPluginMailParser):
@@ -33,7 +44,7 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
             desc="Plugin is not able to handle the requested binary",
             type=FeatureType.String,
         ),
-        Feature(name="filename", desc="Attachment filename extracted from email", type=FeatureType.Filepath),
+        Feature(name="filename", desc="Attachment filename extracted from email", type=FeatureType.String),
     }
 
 
@@ -42,18 +53,19 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
         Extracts attachment as children and features corresponding mail headers.
         """
         path = job.get_data().get_filepath()
-        features: dict[str, str | int | list[str]] = {}
+        features: dict[str, str | int | list[str] | datetime] = {}
         try:
             '''
             Attempt to open the file. May fail. Lots of arguments to re-attempt with
             '''
-            msg = openMsg(path)
+            msg = openMsg(path, delayAttachments=True)
         except UnsupportedMSGTypeError as ex:
             """
             An exception that is raised when an MSG class is recognized by not
             supported.
             """
-            # TODO HANDLE
+            features["processing_failure"] = "Unable to parse OLE file: %s" % str(ex)
+            self.add_many_feature_values(features)
             return
         except UnrecognizedMSGTypeError as ex:
             """
@@ -68,15 +80,30 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
             self.add_many_feature_values(features)
             return
 
-        # NOTE At this point extract_msg should have done all the heavy lifting required
+        # At this point extract_msg should have done all the heavy lifting required
         # Now we just need to map data to features
 
-        if (type(msg) is not Message):
-            return
+        features = self.parse_msg(msg)
+
+        msg.close()
+        self.add_many_feature_values(features)
+
+    def parse_msg(self, msg:MessageBase) -> dict:
+        ''' Takes a msg object and pulls out features we are interested in
+        '''
+        features: dict[str, str | int | list[str] | datetime] = {}
         
-        ## body (ASCII) may not exist, try htmlBody and rftBody
+        if not issubclass(type(msg), MessageBase):
+            self.logger.error("Non-messageBase object given to parse")
+            return features
+
+        # Do Generic parsing that works for all .msg files
+        if msg.header:
+            features = self.parse_headers(msg.header)
+
+        ## body may not exist, try htmlBody and rftBody
         extractedBody = None
-        if msg.body:
+        if msg.body and type(msg.body) is str:
             extractedBody = msg.body.encode("utf-8")
         elif msg.htmlBody:
             extractedBody = msg.htmlBody
@@ -89,93 +116,129 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
         if extractedBody:
             self.add_data(DataLabel.TEXT, {}, extractedBody)
 
-        # Let template rip and format all the headers pulled from the msg
-        if msg.header:
-            features = self.parse_headers(msg.header)
-
         # there may be cases where the mime headers fail to parse from
         # the .msg but the basic fields can still be extracted from the
         # specific ole2 stream equivalents
-        # TODO confirm working
         if not features.get("mail_from") and msg.sender:
-            features["mail_from"] = msg.sender
+            senderEmail, _ = self.textAndEmailSplitter(msg.sender)
+            features["mail_from"] = senderEmail
+        if not features.get("mail_to") and msg.to:
+            toEmail, _ = self.textAndEmailSplitter(msg.to)
+            features["mail_to"] = toEmail
         if not features.get("mail_subject") and msg.subject:
             features["mail_subject"] = msg.subject
-        if not features.get("mail_to") and msg.to:
-            features["mail_to"] = msg.to
         if not features.get("mail_cc") and msg.cc:
             features["mail_cc"] = msg.cc
-        if not features.get("mail_date") and msg.date:
-            features.update(self.parse_date(msg.date))
-
-        '''
-        Attachments: only directly pull one level deep information. All children
-        of correct file type will get processed by this plugin again, and we'll
-        let that run(s) pull out the deeper data. Minimally feature tag the children
-        with data that won't be available on the next run.
-        '''
+        if not features.get("mail_date"):
+            date = None
+            if msg.date:
+                # msg.date is only populated if message is marked as sent.
+                date = msg.date 
+            else:
+                # But dates exist regardless, and could help correlate
+                # Check properties for fallback options
+                fallback_dates_fields = [
+                    MS_OXPROPS.PidTagLastModificationTime,
+                    MS_OXPROPS.PidTagCreationTime,
+                    MS_OXPROPS.PidTagClientSubmitTime
+                ]
+                for field in fallback_dates_fields:
+                    value = msg.getPropertyVal(field.value, 0)
+                    if value and type(value) is datetime:
+                        date = value
+                        break
+            if date:
+                # Have a date: 
+                # - mail_date: drop microseconds and timezone
+                # - mail_timezone: All these fallbacks will return the time in UTC.
+                features["mail_date"] = date.replace(microsecond=0, tzinfo=None)
+                features["mail_timezone"] = "+0000"
+            else:
+                self.logger.info("No meaningful date found")
         
+        # do specific message type parsing
+        self.parse_msg_particulars(msg, features)
+
+        # extract any attachments as child entities
+        self.msg_attachment_extracting(msg.attachments, features, extractedBody)
+
+        return features
+
+    def parse_msg_particulars(self, msg:MessageBase, features:dict):
+        pass
+
+    def msg_attachment_extracting(self, attachments: list[AttachmentBase] | list[SignedAttachment], features:dict, messageBody: bytes | None ):
+        ''' Given the attachments for a message, pull out their data and
+        tag them as children of this job
+
+        @param attachments: Msg attachments object
+        @param features: features dict to update
+        @param messageBody: Message body to build password dictionaries with
+        '''
+
         # reuse the mime decoders child features as the .msg is really just
         # derived from a mime encoded mail anyway..although we only include
         # attachments not any mime parts that were used as the email body.
         hashes = set()
         count = 0
-        # extract any attachments as child entities
-        for attachment in msg.attachments:
 
-            attachmentData = b''
-            filename = attachment.longFilename or attachment.shortFilename
+        for attachment in attachments:
 
             if not attachment.dataType:
                 self.logger.info("Either attachment would raise exception or is an empty attachment")
                 continue
-            elif (issubclass(attachment.dataType, MessageBase)):
-                # Attachment is some kind of embedded .msg . Will be contained
-                # in attachment.data
 
-                filename = attachment.getFilename()
+            extractedData:bytes = b''
+            passwordDictionary = None
 
-                if (attachment.dataType is Message and type(attachment.data) is Message):
-                    # Another email message was attached to this email. If there are suspect or invalid
-                    # embeds, maintain them.
-                    attachmentData = attachment.data.exportBytes(allowBadEmbed=True)
-                elif (issubclass(attachment.dataType, Calendar)):
+            # See if lib has a name for the attachment
+            filename = attachment.name
 
-                    attachmentData = attachment.data.exportBytes(allowBadEmbed=True)
+            if messageBody:
+                if filename:
+                    passwordDictionary = get_words([messageBody], filename)
+                else: 
+                    passwordDictionary = get_words([messageBody])
 
-                    if (issubclass(attachment.dataType, MeetingRelated)):
-                        print('meeting')
-                        # TODO     
-                    else:
-                        # appointment: only non-meeting related message under calendar class
-                        if attachment.data.subject:
-                            # Use appoinment subject as name if it exists
-                            filename = attachment.data.subject + '.msg'
-                        elif msg.filename:
-                            # Use the message attachment is from for name
-                            filename = msg.filename + '.appointment.msg'
-                        else:
-                            # As final fallback use the messageID of the attachment
-                            filename = attachment.data.messageID + '.appointment.msg'
-                else:
-                    # is some kind of other message: journal, contact, post, stickynote, taskrequest, task
-                    print("diffrent submessage type")
-                    # TODO
+            if not filename:
+                # Just name the file based on attachment type
+                match(attachment):
+                    case Attachment():
+                        filename = "attachment"
+                    case BrokenAttachment():
+                        filename = "brokenAttachment"
+                    case CustomAttachment():
+                        filename = "customAttachment"
+                    case EmbeddedMsgAttachment():
+                        filename = "embeddedAttachment"
+                    case SignedAttachment():
+                        filename = "signedAttachment"
+                    case UnsupportedAttachment():
+                        filename = "unsupportedAttachment"
+                    case WebAttachment():
+                        filename = "webAttachment"
+                    case _:
+                        filename = "unknownAttachment"
 
-            elif (attachment.dataType is bytes and type(attachment.data) is bytes):
-                # Can directly use the extracted data
-                attachmentData = attachment.data
-            else:
-                self.logger.warning(f"Attachment is of unhandled type: {attachment.dataType}")
-                continue
+            # Extra data about attachment
+            # TODO
 
-            c = self.add_child_with_data({"action": "extracted"}, attachmentData)  # might be a password protected attachment
+            # Do actual extraction of attachment data
+            if (attachment.dataType is None or attachment.data is None):
+                extractedData = b''
+            elif (type(attachment.data) is bytes):
+                extractedData = attachment.data
+            elif (issubclass(type(attachment.data), MessageBase)):
+                extractedData = attachment.data.exportBytes()
+
+            # Create child and give appropriate data
+            c = self.add_child_with_data({"action": "extracted"}, extractedData)  # might be a password protected attachment
             # supply the mail body text for any unboxing attempts
-            if extractedBody:
-                c.add_data(DataLabel.PASSWORD_DICTIONARY, {}, get_words([extractedBody], filename))
+            if passwordDictionary:
+                c.add_data(DataLabel.PASSWORD_DICTIONARY, {}, passwordDictionary)
             c.add_feature_values("filename", filename)
             h = sha256()
-            h.update(attachmentData)
+            h.update(extractedData)
             hashes.add(h.hexdigest())
             count = count + 1
 
@@ -184,7 +247,26 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
             features["mime_part_hash"] = list(hashes)
 
 
-        self.add_many_feature_values(features)
+    def textAndEmailSplitter(self, data:str) -> tuple[str,str]:
+        ''' textAndEmailSplitter
+        Lib will now pull a text display along with the email. Split them
+        so we can use them separately.
+                  text     email
+        format: "abc@abc <abc@abc>"
+                        or
+                     "abc@abc"
+        @param data: string that may be in above format
+        @return (email, text). Text may be an empty string
+        '''
+        #  Use just the email
+        # format: abc@abc <abc@abc>
+        start = data.find('<')
+        end = data.find('>')
+
+        if (-1 == start):
+            return (data, "")
+        else:
+            return (data[start+1:end], data[:start])    
 
 def main():
     """Run plugin from the command-line."""
