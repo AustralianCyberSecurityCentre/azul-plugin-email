@@ -3,7 +3,7 @@
 import csv
 
 
-def get_words(bodies, filename=None):
+def get_words(bodies: list[bytes], filename:None|str = None) -> bytes:
     """Given a list of mail text bodies, create a password dictionary list.
 
     @param bodies: List of str
