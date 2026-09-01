@@ -1,57 +1,60 @@
-"""Outlook email '.msg' decoder / extractor
+"""Outlook email '.msg' decoder / extractor.
 
-This plugin uses 'extract-msg' https://github.com/TeamMsgExtractor/msg-extractor to 
-decode and extract content and features from '.msg' files. 
+This plugin uses 'extract-msg' https://github.com/TeamMsgExtractor/msg-extractor to
+decode and extract content and features from '.msg' files.
 """
-from hashlib import sha256
+
 from datetime import datetime
+from hashlib import sha256
 
-
+from azul_runner import DataLabel, Feature, FeatureType, Job, State, add_settings, cmdline_run
 from extract_msg import openMsg
-from extract_msg.exceptions import UnsupportedMSGTypeError, UnrecognizedMSGTypeError
-
-from extract_msg.msg_classes.message_base import MessageBase
-from extract_msg.msg_classes.message import Message
-from extract_msg.msg_classes.calendar import Calendar
-from extract_msg.msg_classes.appointment import AppointmentMeeting
-from extract_msg.msg_classes.journal import Journal
-from extract_msg.msg_classes.meeting_cancellation import MeetingCancellation
-from extract_msg.msg_classes.meeting_exception import  MeetingException
-from extract_msg.msg_classes.meeting_forward import MeetingForwardNotification
-from extract_msg.msg_classes.meeting_request import MeetingRequest
-from extract_msg.msg_classes.meeting_response import MeetingResponse
-from extract_msg.msg_classes.message_signed import MessageSigned
-from extract_msg.msg_classes.post import Post
-from extract_msg.msg_classes.contact import Contact
-from extract_msg.msg_classes.sticky_note import StickyNote
-from extract_msg.msg_classes.task_request import TaskRequest
-from extract_msg.msg_classes.task import Task
-
-from extract_msg.attachments.attachment_base import AttachmentBase
 from extract_msg.attachments.attachment import Attachment
+from extract_msg.attachments.attachment_base import AttachmentBase
 from extract_msg.attachments.broken_att import BrokenAttachment
 from extract_msg.attachments.custom_att import CustomAttachment
 from extract_msg.attachments.emb_msg_att import EmbeddedMsgAttachment
 from extract_msg.attachments.signed_att import SignedAttachment
 from extract_msg.attachments.unsupported_att import UnsupportedAttachment
 from extract_msg.attachments.web_att import WebAttachment
-
-
-from azul_runner import DataLabel, Feature, FeatureType, Job, add_settings, cmdline_run, State
+from extract_msg.exceptions import UnrecognizedMSGTypeError, UnsupportedMSGTypeError
+from extract_msg.msg_classes.appointment import AppointmentMeeting
+from extract_msg.msg_classes.calendar import Calendar
+from extract_msg.msg_classes.contact import Contact
+from extract_msg.msg_classes.journal import Journal
+from extract_msg.msg_classes.meeting_cancellation import MeetingCancellation
+from extract_msg.msg_classes.meeting_exception import MeetingException
+from extract_msg.msg_classes.meeting_forward import MeetingForwardNotification
+from extract_msg.msg_classes.meeting_request import MeetingRequest
+from extract_msg.msg_classes.meeting_response import MeetingResponse
+from extract_msg.msg_classes.message import Message
+from extract_msg.msg_classes.message_base import MessageBase
+from extract_msg.msg_classes.message_signed import MessageSigned
+from extract_msg.msg_classes.post import Post
+from extract_msg.msg_classes.sticky_note import StickyNote
+from extract_msg.msg_classes.task import Task
+from extract_msg.msg_classes.task_request import TaskRequest
 
 from azul_plugin_email.helpers import get_words
-from azul_plugin_email.template import AzulPluginMailParser
 from azul_plugin_email.ms_oxprops_enum import MS_OXPROPS
+from azul_plugin_email.template import AzulPluginMailParser
 
 
 class AzulPluginMailExtractMsg(AzulPluginMailParser):
-    """"""
+    """The Azul Plugin Mail Extract Msg class.
+
+    Instance that will be created to parse a msg file.
+    """
 
     VERSION = "2026.08.24"
     SETTINGS = add_settings(filter_data_types={"content": ["document/office/ole"]})
     FEATURES = {
         Feature(name="mime_part_count", desc="Count of any MIME objects within binary", type=FeatureType.Integer),
-        Feature(name="mime_part_type", desc="Content types of objects contained in the MIME sections of binary ", type=FeatureType.String),
+        Feature(
+            name="mime_part_type",
+            desc="Content types of objects contained in the MIME sections of binary ",
+            type=FeatureType.String,
+        ),
         Feature(
             name="mime_part_hash", desc="SHA256 of any decoded MIME objects within binary", type=FeatureType.String
         ),
@@ -63,17 +66,14 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
         Feature(name="filename", desc="Attachment filename extracted from email", type=FeatureType.String),
     }
 
-
-    def execute(self, job:Job):
-        """
-        Extracts attachment as children and features corresponding mail headers.
-        """
+    def execute(self, job: Job):
+        """Extracts attachment as children and features corresponding mail headers."""
         path = job.get_data().get_filepath()
         features: dict[str, str | int | list[str] | datetime] = {}
         try:
-            '''
+            """
             Attempt to open the file. May fail. Lots of arguments to re-attempt with
-            '''
+            """
             msg = openMsg(path, delayAttachments=True)
         except UnsupportedMSGTypeError as ex:
             """
@@ -98,11 +98,10 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
         msg.close()
         self.add_many_feature_values(features)
 
-    def parse_msg(self, msg:MessageBase) -> dict:
-        ''' Takes a msg object and pulls out features we are interested in
-        '''
+    def parse_msg(self, msg: MessageBase) -> dict:
+        """Takes a msg object and pulls out features we are interested in."""
         features: dict[str, str | int | list[str] | datetime] = {}
-        
+
         if not issubclass(type(msg), MessageBase):
             self.logger.error("Non-messageBase object given to parse")
             return features
@@ -143,14 +142,14 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
             date = None
             if msg.date:
                 # msg.date is only populated if message is marked as sent.
-                date = msg.date 
+                date = msg.date
             else:
                 # But dates exist regardless, and could help correlate
                 # Check properties for fallback options
                 fallback_dates_fields = [
                     MS_OXPROPS.PidTagLastModificationTime,
                     MS_OXPROPS.PidTagCreationTime,
-                    MS_OXPROPS.PidTagClientSubmitTime
+                    MS_OXPROPS.PidTagClientSubmitTime,
                 ]
                 for field in fallback_dates_fields:
                     value = msg.getPropertyVal(field.value, 0)
@@ -158,14 +157,14 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
                         date = value
                         break
             if date:
-                # Have a date: 
+                # Have a date:
                 # - mail_date: drop microseconds and timezone
                 # - mail_timezone: All these fallbacks will return the time in UTC.
                 features["mail_date"] = date.replace(microsecond=0, tzinfo=None)
                 features["mail_timezone"] = "+0000"
             else:
                 self.logger.info("No meaningful date found")
-        
+
         # do specific message type parsing
         self.parse_msg_particulars(msg, features)
 
@@ -174,12 +173,14 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
 
         return features
 
-    def parse_msg_particulars(self, msg:MessageBase, features:dict):
-        # Data we would feature tag is pulled using general parsing,
-        # but certain message types may contain some additional information
-        # that could be helpful 
+    def parse_msg_particulars(self, msg: MessageBase, features: dict):
+        """Used to get pull more particular information from a message.
 
-        match(msg):
+        Data we would feature tag is pulled using general parsing,
+        but certain message types may contain some additional information
+        that could be helpful.
+        """
+        match msg:
             case Message():
                 # Already fully mapped / extracted
                 pass
@@ -206,7 +207,7 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
             case MeetingForwardNotification():
                 # important data already extracted
                 pass
-            case MeetingRequest(): 
+            case MeetingRequest():
                 # important data already extracted
                 pass
             case MeetingResponse():
@@ -228,15 +229,17 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
                 # important data already extracted
                 pass
 
-    def msg_attachment_extracting(self, attachments: list[AttachmentBase] | list[SignedAttachment], features:dict, messageBody: bytes | None ):
-        ''' Given the attachments for a message, pull out their data and
-        tag them as children of this job
+    def msg_attachment_extracting(
+        self, attachments: list[AttachmentBase] | list[SignedAttachment], features: dict, messageBody: bytes | None
+    ):
+        """msg_attachment_extracting.
+
+        Given the attachments for a message, pull out their data and tag them as children of this job.
 
         @param attachments: Msg attachments object
         @param features: features dict to update
         @param messageBody: Message body to build password dictionaries with
-        '''
-
+        """
         # reuse the mime decoders child features as the .msg is really just
         # derived from a mime encoded mail anyway..although we only include
         # attachments not any mime parts that were used as the email body.
@@ -245,12 +248,11 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
         count = 0
 
         for attachment in attachments:
-
             if not attachment.dataType:
                 self.logger.info("Either attachment would raise exception or is an empty attachment")
                 continue
 
-            extractedData:bytes = b''
+            extractedData: bytes = b""
             passwordDictionary = None
 
             # See if lib has a name for the attachment
@@ -259,12 +261,12 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
             if messageBody:
                 if filename:
                     passwordDictionary = get_words([messageBody], filename)
-                else: 
+                else:
                     passwordDictionary = get_words([messageBody])
 
-            if not filename or filename.rstrip('\x00') == '':
+            if not filename or filename.rstrip("\x00") == "":
                 # Just name the file based on attachment type
-                match(attachment):
+                match attachment:
                     case Attachment():
                         filename = "attachment"
                     case BrokenAttachment():
@@ -283,11 +285,11 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
                         filename = "unknownAttachment"
 
             # Do actual extraction of attachment data
-            if (attachment.dataType is None or attachment.data is None):
-                extractedData = b''
-            elif (type(attachment.data) is bytes):
+            if attachment.dataType is None or attachment.data is None:
+                extractedData = b""
+            elif type(attachment.data) is bytes:
                 extractedData = attachment.data
-            elif (issubclass(type(attachment.data), MessageBase)):
+            elif issubclass(type(attachment.data), MessageBase):
                 extractedData = attachment.data.exportBytes()
 
             # Data to for parent about children
@@ -295,12 +297,14 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
                 mimeType.add(attachment.mimetype)
             # TODO would attachment.hidden be of value to tag?
 
-            if extractedData == b'':
-                # If we can't get data out, skip over. 
+            if extractedData == b"":
+                # If we can't get data out, skip over.
                 continue
 
-            # Create child and give appropriate data 
-            c = self.add_child_with_data({"action": "extracted"}, extractedData)  # might be a password protected attachment
+            # Create child and give appropriate data
+            c = self.add_child_with_data(
+                {"action": "extracted"}, extractedData
+            )  # might be a password protected attachment
             # supply the mail body text for any unboxing attempts
             if passwordDictionary:
                 c.add_data(DataLabel.PASSWORD_DICTIONARY, {}, passwordDictionary)
@@ -317,27 +321,27 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
         if len(mimeType) > 0:
             features["mime_part_type"] = list(mimeType)
 
+    def textAndEmailSplitter(self, data: str) -> tuple[str, str]:
+        """TextAndEmailSplitter.
 
-    def textAndEmailSplitter(self, data:str) -> tuple[str,str]:
-        ''' textAndEmailSplitter
-        Lib will now pull a text display along with the email. Split them
-        so we can use them separately.
+        Lib will now pull a text display along with the email. Split them so we can use them separately.
                   text     email
         format: "abc@abc <abc@abc>"
                         or
                      "abc@abc"
-        @param data: string that may be in above format
-        @return (email, text). Text may be an empty string
-        '''
+        @param data: string that may be in above format.
+        @return (email, text). Text may be an empty string.
+        """
         #  Use just the email
         # format: abc@abc <abc@abc>
-        start = data.find('<')
-        end = data.find('>')
+        start = data.find("<")
+        end = data.find(">")
 
-        if (-1 == start):
+        if -1 == start:
             return (data, "")
         else:
-            return (data[start+1:end], data[:start])    
+            return (data[start + 1 : end], data[:start])
+
 
 def main():
     """Run plugin from the command-line."""

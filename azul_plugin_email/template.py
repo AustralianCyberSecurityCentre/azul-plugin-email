@@ -32,7 +32,7 @@ class AzulPluginMailParser(BinaryPlugin):
         Feature(name="mail_extension_header_value", desc="Value of header extension field", type=FeatureType.String),
     ]
 
-    def parse_date(self, dstring:str):
+    def parse_date(self, dstring: str):
         """Given an email timestamp str, convert to a datetime object."""
         features = {}
         # extract the timezone offset as we are going to lose it in normalising to UTC
