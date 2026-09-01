@@ -110,6 +110,7 @@ class TestExecute(test_template.TestPlugin):
                             "mail_to": [FV("<tn3538@pioneercredit.net>")],
                             "mime_part_count": [FV(1)],
                             "mime_part_hash": [FV("f83dab5e27d17dec0c491d4d8587f08b5b684b5782c7a91d529d9a891420829d")],
+                            "mime_part_type": [FV("application/octet-stream")],
                         },
                     ),
                     Event(
@@ -177,7 +178,6 @@ class TestExecute(test_template.TestPlugin):
 
     def test_cannot_process(self):
         """Incomplete OLE mail file - terminal error"""
-        # Do we still want to handle like this in AZUL 3?
         result = self.do_execution(
             data_in=[
                 (
@@ -191,15 +191,7 @@ class TestExecute(test_template.TestPlugin):
         )
         self.assertJobResult(
             result,
-            JobResult(
-                state=State(State.Label.COMPLETED),
-                events=[
-                    Event(
-                        sha256="e7e8a42e47ca609716010907f06f465b0f11c3b9e9949961781c9199c8a968f3",
-                        features={"processing_failure": [FV("Unable to parse OLE file: incomplete OLE sector")]},
-                    )
-                ],
-            ),
+            JobResult(state=State(State.Label.ERROR_EXCEPTION, message="incomplete OLE sector")),
         )
 
     def test_email_with_hex_values(self):
@@ -275,6 +267,7 @@ class TestExecute(test_template.TestPlugin):
                             "mail_to": [FV("undisclosed-recipients:")],
                             "mime_part_count": [FV(1)],
                             "mime_part_hash": [FV("9a7368c9210f500fae07a432c2b56da62a5ba86991dcc0afa350a651ab34073e")],
+                            "mime_part_type": [FV("application/x-rar")],
                         },
                     ),
                     Event(

@@ -11,6 +11,21 @@ from extract_msg import openMsg
 from extract_msg.exceptions import UnsupportedMSGTypeError, UnrecognizedMSGTypeError
 
 from extract_msg.msg_classes.message_base import MessageBase
+from extract_msg.msg_classes.message import Message
+from extract_msg.msg_classes.calendar import Calendar
+from extract_msg.msg_classes.appointment import AppointmentMeeting
+from extract_msg.msg_classes.journal import Journal
+from extract_msg.msg_classes.meeting_cancellation import MeetingCancellation
+from extract_msg.msg_classes.meeting_exception import  MeetingException
+from extract_msg.msg_classes.meeting_forward import MeetingForwardNotification
+from extract_msg.msg_classes.meeting_request import MeetingRequest
+from extract_msg.msg_classes.meeting_response import MeetingResponse
+from extract_msg.msg_classes.message_signed import MessageSigned
+from extract_msg.msg_classes.post import Post
+from extract_msg.msg_classes.contact import Contact
+from extract_msg.msg_classes.sticky_note import StickyNote
+from extract_msg.msg_classes.task_request import TaskRequest
+from extract_msg.msg_classes.task import Task
 
 from extract_msg.attachments.attachment_base import AttachmentBase
 from extract_msg.attachments.attachment import Attachment
@@ -22,7 +37,7 @@ from extract_msg.attachments.unsupported_att import UnsupportedAttachment
 from extract_msg.attachments.web_att import WebAttachment
 
 
-from azul_runner import DataLabel, Feature, FeatureType, Job, add_settings, cmdline_run
+from azul_runner import DataLabel, Feature, FeatureType, Job, add_settings, cmdline_run, State
 
 from azul_plugin_email.helpers import get_words
 from azul_plugin_email.template import AzulPluginMailParser
@@ -36,6 +51,7 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
     SETTINGS = add_settings(filter_data_types={"content": ["document/office/ole"]})
     FEATURES = {
         Feature(name="mime_part_count", desc="Count of any MIME objects within binary", type=FeatureType.Integer),
+        Feature(name="mime_part_type", desc="Content types of objects contained in the MIME sections of binary ", type=FeatureType.String),
         Feature(
             name="mime_part_hash", desc="SHA256 of any decoded MIME objects within binary", type=FeatureType.String
         ),
@@ -64,21 +80,15 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
             An exception that is raised when an MSG class is recognized by not
             supported.
             """
-            features["processing_failure"] = "Unable to parse OLE file: %s" % str(ex)
-            self.add_many_feature_values(features)
-            return
+            return State(State.Label.ERROR_EXCEPTION, message=str(ex))
         except UnrecognizedMSGTypeError as ex:
             """
             An exception that is raised when the module cannot determine how to properly
             open a specific class of MSG file.
             """
-            features["processing_failure"] = "Unable to parse OLE file: %s" % str(ex)
-            self.add_many_feature_values(features)
-            return
+            return State(State.Label.ERROR_EXCEPTION, message=str(ex))
         except OSError as ex:
-            features["processing_failure"] = "Unable to parse OLE file: %s" % str(ex)
-            self.add_many_feature_values(features)
-            return
+            return State(State.Label.ERROR_EXCEPTION, message=str(ex))
 
         # At this point extract_msg should have done all the heavy lifting required
         # Now we just need to map data to features
@@ -165,7 +175,58 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
         return features
 
     def parse_msg_particulars(self, msg:MessageBase, features:dict):
-        pass
+        # Data we would feature tag is pulled using general parsing,
+        # but certain message types may contain some additional information
+        # that could be helpful 
+
+        match(msg):
+            case Message():
+                # Already fully mapped / extracted
+                pass
+            case AppointmentMeeting():
+                # Gets new info such as reoccurrence pattern, start and end date
+                print("HIT")
+                self.add_text(msg.getJson())
+            case Calendar():
+                # Do not see evidence of this type being common
+                pass
+            case Contact():
+                # Large amount of possible additional information
+                # checkout extract-msg.msg_classes.contact
+                self.add_text(msg.getJson())
+            case Journal():
+                # Possible start/end date and companies
+                self.add_text(msg.getJson())
+            case MeetingCancellation():
+                # important data already extracted
+                pass
+            case MeetingException():
+                # important data already extracted
+                pass
+            case MeetingForwardNotification():
+                # important data already extracted
+                pass
+            case MeetingRequest(): 
+                # important data already extracted
+                pass
+            case MeetingResponse():
+                # important data already extracted
+                pass
+            case MessageSigned():
+                # Not much data seems available
+                pass
+            case Post():
+                # Already fully mapped / extracted
+                pass
+            case StickyNote():
+                # Only additional info is color and size
+                pass
+            case TaskRequest():
+                # important data already extracted
+                pass
+            case Task():
+                # important data already extracted
+                pass
 
     def msg_attachment_extracting(self, attachments: list[AttachmentBase] | list[SignedAttachment], features:dict, messageBody: bytes | None ):
         ''' Given the attachments for a message, pull out their data and
@@ -180,6 +241,7 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
         # derived from a mime encoded mail anyway..although we only include
         # attachments not any mime parts that were used as the email body.
         hashes = set()
+        mimeType = set()
         count = 0
 
         for attachment in attachments:
@@ -200,7 +262,7 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
                 else: 
                     passwordDictionary = get_words([messageBody])
 
-            if not filename:
+            if not filename or filename.rstrip('\x00') == '':
                 # Just name the file based on attachment type
                 match(attachment):
                     case Attachment():
@@ -220,9 +282,6 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
                     case _:
                         filename = "unknownAttachment"
 
-            # Extra data about attachment
-            # TODO
-
             # Do actual extraction of attachment data
             if (attachment.dataType is None or attachment.data is None):
                 extractedData = b''
@@ -231,7 +290,16 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
             elif (issubclass(type(attachment.data), MessageBase)):
                 extractedData = attachment.data.exportBytes()
 
-            # Create child and give appropriate data
+            # Data to for parent about children
+            if attachment.mimetype:
+                mimeType.add(attachment.mimetype)
+            # TODO would attachment.hidden be of value to tag?
+
+            if extractedData == b'':
+                # If we can't get data out, skip over. 
+                continue
+
+            # Create child and give appropriate data 
             c = self.add_child_with_data({"action": "extracted"}, extractedData)  # might be a password protected attachment
             # supply the mail body text for any unboxing attempts
             if passwordDictionary:
@@ -245,6 +313,9 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
         if count:
             features["mime_part_count"] = count
             features["mime_part_hash"] = list(hashes)
+
+        if len(mimeType) > 0:
+            features["mime_part_type"] = list(mimeType)
 
 
     def textAndEmailSplitter(self, data:str) -> tuple[str,str]:
