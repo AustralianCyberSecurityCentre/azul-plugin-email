@@ -42,7 +42,12 @@ class AzulPluginMailParser(BinaryPlugin):
 
         st = utils.parsedate_tz(dstring)
         if st:
-            dt = datetime.fromtimestamp(time.mktime(st[0:-1]) - st[-1])
+            seconds_since_epoch = time.mktime(st[0:-1])
+            timezone_seconds = st[-1]
+            if timezone_seconds:
+                dt = datetime.fromtimestamp(seconds_since_epoch - timezone_seconds)
+            else:
+                dt = datetime.fromtimestamp(seconds_since_epoch)
             features["mail_date"] = dt
         return features
 

@@ -93,7 +93,8 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
         # At this point extract_msg should have done all the heavy lifting required
         # Now we just need to map data to features
 
-        features = self.parse_msg(msg)
+        # We double check inside function that msg is of MessageBase
+        features = self.parse_msg(msg)  # type: ignore
 
         msg.close()
         self.add_many_feature_values(features)
@@ -287,10 +288,10 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
             # Do actual extraction of attachment data
             if attachment.dataType is None or attachment.data is None:
                 extractedData = b""
-            elif type(attachment.data) is bytes:
+            elif isinstance(attachment.data, bytes):
                 extractedData = attachment.data
             elif issubclass(type(attachment.data), MessageBase):
-                extractedData = attachment.data.exportBytes()
+                extractedData = attachment.data.exportBytes()  # type: ignore
 
             # Data to for parent about children
             if attachment.mimetype:
