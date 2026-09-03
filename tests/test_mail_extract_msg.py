@@ -49,10 +49,12 @@ class TestExecute(test_template.TestPlugin):
                         sha256="b94e9620d883da9c8d445725e55793bbe51b5fc7828819eaea86245f10e566ae",
                         data=[
                             EventData(
-                                hash="655b7faff635b22dc04cd7772d023f85122897b3a17f8e6ceb1ef033a0ccba71", label="text"
+                                hash="655b7faff635b22dc04cd7772d023f85122897b3a17f8e6ceb1ef033a0ccba71",
+                                label=DataLabel.TEXT,
                             )
                         ],
                         features={
+                            "attachment": [FV("attachment")],
                             "mail_address": [
                                 FV("cashier@toinfiniti.com"),
                                 FV("prvs=0422c5592=cashier@toinfiniti.com"),
@@ -111,6 +113,7 @@ class TestExecute(test_template.TestPlugin):
                             "mime_part_count": [FV(1)],
                             "mime_part_hash": [FV("f83dab5e27d17dec0c491d4d8587f08b5b684b5782c7a91d529d9a891420829d")],
                             "mime_part_type": [FV("application/octet-stream")],
+                            "outlook_type": [FV("message")],
                         },
                     ),
                     Event(
@@ -126,7 +129,7 @@ class TestExecute(test_template.TestPlugin):
                             ),
                             EventData(
                                 hash="13cb4fb56aac4bf9b7804a4deadfd3cde4d9f83f9655cd0ad3b9c5a657cfc7ff",
-                                label="password_dictionary",
+                                label=DataLabel.PASSWORD_DICTIONARY,
                             ),
                         ],
                         features={"filename": [FV(Filepath("complaint_18485.doc"))]},
@@ -161,7 +164,8 @@ class TestExecute(test_template.TestPlugin):
                         sha256="9676ca02b32c15bf47bcf4295131d807a2729c2d1cddc53c4d40b57aa6c6d32b",
                         data=[
                             EventData(
-                                hash="663a3268118c3cd710ebd73c79a59a9026308eec4a01a0ecb6cdc7f2004630ff", label="text"
+                                hash="663a3268118c3cd710ebd73c79a59a9026308eec4a01a0ecb6cdc7f2004630ff",
+                                label=DataLabel.TEXT,
                             )
                         ],
                         features={
@@ -169,6 +173,7 @@ class TestExecute(test_template.TestPlugin):
                             "mail_subject": [FV("MSG Test File")],
                             "mail_timezone": [FV("+0000")],
                             "mail_to": [FV("time2talk@online-convert.com")],
+                            "outlook_type": [FV("message")],
                         },
                     )
                 ],
@@ -191,7 +196,7 @@ class TestExecute(test_template.TestPlugin):
         )
         self.assertJobResult(
             result,
-            JobResult(state=State(State.Label.ERROR_EXCEPTION, message="incomplete OLE sector")),
+            JobResult(state=State(State.Label.COMPLETED_WITH_ERRORS, message="Malformed: incomplete OLE sector")),
         )
 
     def test_email_with_hex_values(self):
@@ -216,10 +221,12 @@ class TestExecute(test_template.TestPlugin):
                         sha256="4ae594fc5c4708b3ab4e93dc52dfa3e373da4cd382500d544ef5f305e625b005",
                         data=[
                             EventData(
-                                hash="2ddacf3a16f73a1abf2a25955b45c5d342cc17ecefa21d7098b9092b8cb0727c", label="text"
+                                hash="2ddacf3a16f73a1abf2a25955b45c5d342cc17ecefa21d7098b9092b8cb0727c",
+                                label=DataLabel.TEXT,
                             )
                         ],
                         features={
+                            "attachment": [FV("attachment")],
                             "mail_address": [FV("info@areacars.de")],
                             "mail_agent": [FV("Zimbra 8.8.15_GA_3888 (ZimbraWebClient - FF123 (Win)/8.8.15_GA_3890)")],
                             "mail_date": [FV(datetime.datetime(2024, 3, 6, 23, 41, 25))],
@@ -268,13 +275,12 @@ class TestExecute(test_template.TestPlugin):
                             "mime_part_count": [FV(1)],
                             "mime_part_hash": [FV("9a7368c9210f500fae07a432c2b56da62a5ba86991dcc0afa350a651ab34073e")],
                             "mime_part_type": [FV("application/x-rar")],
+                            "outlook_type": [FV("message")],
                         },
                     ),
                     Event(
-                        parent=EventParent(
-                            sha256="4ae594fc5c4708b3ab4e93dc52dfa3e373da4cd382500d544ef5f305e625b005",
-                        ),
                         sha256="9a7368c9210f500fae07a432c2b56da62a5ba86991dcc0afa350a651ab34073e",
+                        parent=EventParent(sha256="4ae594fc5c4708b3ab4e93dc52dfa3e373da4cd382500d544ef5f305e625b005"),
                         relationship={"action": "extracted"},
                         data=[
                             EventData(
@@ -283,16 +289,16 @@ class TestExecute(test_template.TestPlugin):
                             ),
                             EventData(
                                 hash="05b5636be7bb7606a4365460243ef3a4a9087ad7f5644763b98b3213bc15ccce",
-                                label="password_dictionary",
+                                label=DataLabel.PASSWORD_DICTIONARY,
                             ),
                         ],
                         features={"filename": [FV("Pago Transferencias 897877667.rar")]},
                     ),
                 ],
                 data={
+                    "2ddacf3a16f73a1abf2a25955b45c5d342cc17ecefa21d7098b9092b8cb0727c": b"",
                     "9a7368c9210f500fae07a432c2b56da62a5ba86991dcc0afa350a651ab34073e": b"",
                     "05b5636be7bb7606a4365460243ef3a4a9087ad7f5644763b98b3213bc15ccce": b"",
-                    "2ddacf3a16f73a1abf2a25955b45c5d342cc17ecefa21d7098b9092b8cb0727c": b"",
                 },
             ),
         )

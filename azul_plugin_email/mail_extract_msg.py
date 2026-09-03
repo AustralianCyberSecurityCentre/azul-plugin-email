@@ -59,11 +59,25 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
             name="mime_part_hash", desc="SHA256 of any decoded MIME objects within binary", type=FeatureType.String
         ),
         Feature(
-            name="processing_failure",
-            desc="Plugin is not able to handle the requested binary",
+            name="filename",
+            desc="Attachment filename extracted from email: if none defaults name to attachment type",
             type=FeatureType.String,
         ),
-        Feature(name="filename", desc="Attachment filename extracted from email", type=FeatureType.String),
+        Feature(
+            name="attachment",
+            desc="Type of attachment found in msg: attachment, attachment_embedded, hidden_attachment_web...",
+            type=FeatureType.String,
+        ),
+        Feature(
+            name="outlook_type",
+            desc="Type of outlook object, e.g. calendar, message, appointment...",
+            type=FeatureType.String,
+        ),
+        Feature(
+            name="malformed",
+            desc="File is malformed in some way.",
+            type=FeatureType.String,
+        ),
     }
 
     def execute(self, job: Job):
@@ -77,18 +91,18 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
             msg = openMsg(path, delayAttachments=True)
         except UnsupportedMSGTypeError as ex:
             """
-            An exception that is raised when an MSG class is recognized by not
+            An exception that is raised when an MSG class is recognized but not
             supported.
             """
-            return State(State.Label.ERROR_EXCEPTION, message=str(ex))
+            return State(State.Label.COMPLETED_WITH_ERRORS, message="Unsupported MSG type: " + str(ex))
         except UnrecognizedMSGTypeError as ex:
             """
             An exception that is raised when the module cannot determine how to properly
             open a specific class of MSG file.
             """
-            return State(State.Label.ERROR_EXCEPTION, message=str(ex))
+            return State(State.Label.COMPLETED_WITH_ERRORS, message="Unknown MSG type: " + str(ex))
         except OSError as ex:
-            return State(State.Label.ERROR_EXCEPTION, message=str(ex))
+            return State(State.Label.COMPLETED_WITH_ERRORS, message="Malformed: " + str(ex))
 
         # At this point extract_msg should have done all the heavy lifting required
         # Now we just need to map data to features
@@ -111,7 +125,12 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
         if msg.header:
             features = self.parse_headers(msg.header)
 
-        ## body may not exist, try htmlBody and rftBody
+        """
+        extract_msg internals will currently:
+        - msg.body     directly return plaintext body (__substg1.0_1000) if found, or tries to wrap rtfBody
+        - msg.htmlBody directly return the HTML stream (__substg1.0_10130102) if found or wrap rtfBody
+        - msg.rtfBody  directly return decompressed rtf (__substg1.0_10090102) if found and de-compressible
+        """
         extractedBody = None
         if msg.body and type(msg.body) is str:
             extractedBody = msg.body.encode("utf-8")
@@ -119,8 +138,12 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
             extractedBody = msg.htmlBody
         elif msg.rtfBody:
             extractedBody = msg.rtfBody
+        elif msg.compressedRtf:
+            # Only hit this case if rtfBody failed to decompress, means malformed
+            features["malformed"] = "Unable to decompress RTF email body"
+            extractedBody = msg.compressedRtf
         else:
-            self.logger.warning("body either does not exist or can't be parse")
+            self.logger.info("Email body does not exist")
 
         # raise body as txt report
         if extractedBody:
@@ -184,51 +207,53 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
         match msg:
             case Message():
                 # Already fully mapped / extracted
-                pass
+                features["outlook_type"] = "message"
             case AppointmentMeeting():
                 # Gets new info such as reoccurrence pattern, start and end date
-                print("HIT")
                 self.add_text(msg.getJson())
+                features["outlook_type"] = "appointment"
             case Calendar():
                 # Do not see evidence of this type being common
-                pass
+                features["outlook_type"] = "calendar"
             case Contact():
                 # Large amount of possible additional information
                 # checkout extract-msg.msg_classes.contact
                 self.add_text(msg.getJson())
+                features["outlook_type"] = "contact"
             case Journal():
                 # Possible start/end date and companies
                 self.add_text(msg.getJson())
+                features["outlook_type"] = "journal"
             case MeetingCancellation():
                 # important data already extracted
-                pass
+                features["outlook_type"] = "meeting_cancellation"
             case MeetingException():
                 # important data already extracted
-                pass
+                features["outlook_type"] = "meeting_exception"
             case MeetingForwardNotification():
                 # important data already extracted
-                pass
+                features["outlook_type"] = "meeting_forward_notification"
             case MeetingRequest():
                 # important data already extracted
-                pass
+                features["outlook_type"] = "meeting_request"
             case MeetingResponse():
                 # important data already extracted
-                pass
+                features["outlook_type"] = "meeting_response"
             case MessageSigned():
                 # Not much data seems available
-                pass
+                features["outlook_type"] = "message_signed"
             case Post():
                 # Already fully mapped / extracted
-                pass
+                features["outlook_type"] = "post"
             case StickyNote():
                 # Only additional info is color and size
-                pass
+                features["outlook_type"] = "sticky_note"
             case TaskRequest():
                 # important data already extracted
-                pass
+                features["outlook_type"] = "task_request"
             case Task():
                 # important data already extracted
-                pass
+                features["outlook_type"] = "task"
 
     def msg_attachment_extracting(
         self, attachments: list[AttachmentBase] | list[SignedAttachment], features: dict, messageBody: bytes | None
@@ -242,10 +267,11 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
         @param messageBody: Message body to build password dictionaries with
         """
         # reuse the mime decoders child features as the .msg is really just
-        # derived from a mime encoded mail anyway..although we only include
+        # derived from a mime encoded mail anyway. Although we only include
         # attachments not any mime parts that were used as the email body.
         hashes = set()
-        mimeType = set()
+        mimeType: set[str] = set()
+        attachment_types: set[str] = set()
         count = 0
 
         for attachment in attachments:
@@ -265,25 +291,32 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
                 else:
                     passwordDictionary = get_words([messageBody])
 
+            match attachment:
+                case Attachment():
+                    type_string = "attachment"
+                case BrokenAttachment():
+                    type_string = "broken_attachment"
+                case CustomAttachment():
+                    type_string = "custom_attachment"
+                case EmbeddedMsgAttachment():
+                    type_string = "embedded_attachment"
+                case SignedAttachment():
+                    type_string = "signed_attachment"
+                case UnsupportedAttachment():
+                    type_string = "unsupported_attachment"
+                case WebAttachment():
+                    type_string = "web_attachment"
+                case _:
+                    type_string = "unknown_attachment"
+
+            if not isinstance(attachment, SignedAttachment) and attachment.hidden:
+                type_string = "hidden_" + type_string
+
+            attachment_types.add(type_string)
+
             if not filename or filename.rstrip("\x00") == "":
-                # Just name the file based on attachment type
-                match attachment:
-                    case Attachment():
-                        filename = "attachment"
-                    case BrokenAttachment():
-                        filename = "brokenAttachment"
-                    case CustomAttachment():
-                        filename = "customAttachment"
-                    case EmbeddedMsgAttachment():
-                        filename = "embeddedAttachment"
-                    case SignedAttachment():
-                        filename = "signedAttachment"
-                    case UnsupportedAttachment():
-                        filename = "unsupportedAttachment"
-                    case WebAttachment():
-                        filename = "webAttachment"
-                    case _:
-                        filename = "unknownAttachment"
+                # Just name the file based on attachment type if empty or only null bytes
+                filename = type_string
 
             # Do actual extraction of attachment data
             if attachment.dataType is None or attachment.data is None:
@@ -293,10 +326,9 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
             elif issubclass(type(attachment.data), MessageBase):
                 extractedData = attachment.data.exportBytes()  # type: ignore
 
-            # Data to for parent about children
+            # Data for parent about children
             if attachment.mimetype:
-                mimeType.add(attachment.mimetype)
-            # TODO would attachment.hidden be of value to tag?
+                mimeType.add(attachment.mimetype.rstrip("\x00"))
 
             if extractedData == b"":
                 # If we can't get data out, skip over.
@@ -319,8 +351,11 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
             features["mime_part_count"] = count
             features["mime_part_hash"] = list(hashes)
 
-        if len(mimeType) > 0:
+        if mimeType:
             features["mime_part_type"] = list(mimeType)
+
+        if attachment_types:
+            features["attachment"] = list(attachment_types)
 
     def textAndEmailSplitter(self, data: str) -> tuple[str, str]:
         """TextAndEmailSplitter.
