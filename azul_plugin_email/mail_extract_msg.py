@@ -73,11 +73,6 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
             desc="Type of outlook object, e.g. calendar, message, appointment...",
             type=FeatureType.String,
         ),
-        Feature(
-            name="malformed",
-            desc="File is malformed in some way.",
-            type=FeatureType.String,
-        ),
     }
 
     def execute(self, job: Job):
@@ -140,8 +135,8 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
             extractedBody = msg.rtfBody
         elif msg.compressedRtf:
             # Only hit this case if rtfBody failed to decompress, means malformed
-            features["malformed"] = "Unable to decompress RTF email body"
             extractedBody = msg.compressedRtf
+            self.is_malformed("Unable to decompress RTF email body")
         else:
             self.logger.info("Email body does not exist")
 
