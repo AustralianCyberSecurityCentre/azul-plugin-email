@@ -29,10 +29,11 @@ dependencies = [
     "beautifulsoup4>=4.9",
     "click>=8.3.1",
     "olefile>=0.46",
+    "extract-msg>=0.56.1",
 ]
 
 [project.scripts]
-azul-plugin-olemail = "azul_plugin_email.olemail:main"
+azul-plugin-mail-extract-msg = "azul_plugin_email.mail_extract_msg:main"
 azul-plugin-mail-headers = "azul_plugin_email.mail_headers:main"
 azul-plugin-mime-decoder = "azul_plugin_email.mime_decoder:main"
 email-parser = "azul_plugin_email.parser:main"

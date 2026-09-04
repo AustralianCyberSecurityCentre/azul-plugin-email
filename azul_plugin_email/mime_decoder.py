@@ -19,7 +19,6 @@ from azul_runner import (
     Filepath,
     Job,
     State,
-    Uri,
     add_settings,
     cmdline_run,
 )
@@ -102,17 +101,12 @@ class AzulPluginMimeDecoder(BinaryPlugin):
         Feature(
             name="mime_content_location",
             desc="Content location of object extracted from a MIME document",
-            type=FeatureType.Uri,
+            type=FeatureType.String,
         ),
         Feature(
             name="mime_content_id", desc="Content Id of object extracted from a MIME document", type=FeatureType.String
         ),
-        Feature(
-            name="processing_failure",
-            desc="Plugin is not able to handle the requested binary",
-            type=FeatureType.String,
-        ),
-        Feature(name="filename", desc="Attachment filename extracted from email", type=FeatureType.Filepath),
+        Feature(name="filename", desc="Attachment filename extracted from email", type=FeatureType.String),
         Feature(name="tag", desc="An informational label about the binary", type=FeatureType.String),
     ]
 
@@ -240,7 +234,7 @@ class AzulPluginMimeDecoder(BinaryPlugin):
             # set up a dict for the child features
             child_features["mime_content_type"] = content_type
             if part.get("Content-Location"):
-                child_features["mime_content_location"] = Uri(part.get("Content-Location"))
+                child_features["mime_content_location"] = part.get("Content-Location")
             if part.get("Content-ID"):
                 child_features["mime_content_id"] = part.get("Content-ID")
 
