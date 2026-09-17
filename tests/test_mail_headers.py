@@ -8,7 +8,7 @@ generic mail header parsing code in template.py
 
 import datetime
 
-from azul_runner import FV, Event, JobResult, State, Uri, test_template
+from azul_runner import FV, Event, JobResult, State, test_template
 
 from azul_plugin_email.mail_headers import AzulPluginMailHeaders
 
@@ -40,7 +40,7 @@ class TestExecute(test_template.TestPlugin):
                             "mail_address": [FV("person1@email1.com"), FV("person2@email2.com")],
                             "mail_agent": [FV("FoxMail 3.11 Release [xx]")],
                             "mail_date": [FV(datetime.datetime(2011, 4, 10, 2, 17, 11))],
-                            "mail_domain": [FV(Uri("email1.com")), FV(Uri("email2.com"))],
+                            "mail_domain": [FV(("email1.com")), FV(("email2.com"))],
                             "mail_extension_header": [FV("X-Mailer"), FV("X-Priority")],
                             "mail_extension_header_value": [
                                 FV("3", label="X-Priority"),
@@ -78,7 +78,7 @@ class TestExecute(test_template.TestPlugin):
                         features={
                             "mail_address": [FV("99b2ca30b@87556.ru"), FV("caf9@14252ef73f1ba9.ru")],
                             "mail_date": [FV(datetime.datetime(2021, 10, 11, 22, 14, 31))],
-                            "mail_domain": [FV(Uri("14252ef73f1ba9.ru")), FV(Uri("87556.ru"))],
+                            "mail_domain": [FV(("14252ef73f1ba9.ru")), FV(("87556.ru"))],
                             "mail_extension_header": [FV("X-Rejection-Reason")],
                             "mail_extension_header_value": [
                                 FV(

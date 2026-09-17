@@ -16,19 +16,19 @@ To install azul-plugin-email for development run the command
 pip install -e .
 ```
 
-## Usage: azul-olemail
+## Usage: azul-mail-extract-msg
 
 Usage on local files:
 
 ```
-azul-plugin-olemail test.msg
+azul-plugin-mail-extract-msg test.msg
 ```
 
 Example Output:
 
 ```
------ OleMail results -----
-OK
+----- AzulPluginMailExtractMsg results -----
+COMPLETED
 
 Output features:
                 mail_timezone: +0200
@@ -83,7 +83,7 @@ Generated child entities (2):
 Automated usage in system:
 
 ```
-azul-plugin-olemail --server http://azul-dispatcher.localnet/
+azul-plugin-mail-extract-msg --server http://azul-dispatcher.localnet/
 ```
 
 ## Usage: azul-mail-headers
