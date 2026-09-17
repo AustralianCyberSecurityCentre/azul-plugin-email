@@ -132,7 +132,7 @@ class TestExecute(test_template.TestPlugin):
                                 label=DataLabel.PASSWORD_DICTIONARY,
                             ),
                         ],
-                        features={"filename": [FV(Filepath("complaint_18485.doc"))]},
+                        features={"attachment_filename": [FV(Filepath("complaint_18485.doc"))]},
                     ),
                 ],
                 data={
@@ -292,7 +292,7 @@ class TestExecute(test_template.TestPlugin):
                                 label=DataLabel.PASSWORD_DICTIONARY,
                             ),
                         ],
-                        features={"filename": [FV("Pago Transferencias 897877667.rar")]},
+                        features={"attachment_filename": [FV("Pago Transferencias 897877667.rar")]},
                     ),
                 ],
                 data={

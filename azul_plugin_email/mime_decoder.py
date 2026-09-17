@@ -101,7 +101,7 @@ class AzulPluginMimeDecoder(BinaryPlugin):
         Feature(
             name="mime_content_location",
             desc="Content location of object extracted from a MIME document",
-            type=FeatureType.String,
+            type=FeatureType.Uri,
         ),
         Feature(
             name="mime_content_id", desc="Content Id of object extracted from a MIME document", type=FeatureType.String

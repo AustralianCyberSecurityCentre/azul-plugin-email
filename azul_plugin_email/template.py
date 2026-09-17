@@ -26,7 +26,7 @@ class AzulPluginMailParser(BinaryPlugin):
         Feature(name="mail_timezone", desc="Local timezone offset the email was sent from", type=FeatureType.String),
         Feature(name="mail_return_path", desc="Return address from mail headers", type=FeatureType.String),
         Feature(name="mail_address", desc="Parsed email addresses from headers", type=FeatureType.String),
-        Feature(name="mail_domain", desc="Domain names from any associated email addresses", type=FeatureType.String),
+        Feature(name="mail_domain", desc="Domain names from any associated email addresses", type=FeatureType.Uri),
         Feature(name="mail_agent", desc="Mail client that sent message", type=FeatureType.String),
         Feature(name="mail_extension_header", desc="Mail header extension field", type=FeatureType.String),
         Feature(name="mail_extension_header_value", desc="Value of header extension field", type=FeatureType.String),

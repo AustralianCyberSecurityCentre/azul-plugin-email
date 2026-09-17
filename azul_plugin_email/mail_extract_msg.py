@@ -59,7 +59,7 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
             name="mime_part_hash", desc="SHA256 of any decoded MIME objects within binary", type=FeatureType.String
         ),
         Feature(
-            name="filename",
+            name="attachment_filename",
             desc="Attachment filename extracted from email: if none defaults name to attachment type",
             type=FeatureType.String,
         ),
@@ -336,7 +336,7 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
             # supply the mail body text for any unboxing attempts
             if passwordDictionary:
                 c.add_data(DataLabel.PASSWORD_DICTIONARY, {}, passwordDictionary)
-            c.add_feature_values("filename", filename)
+            c.add_feature_values("attachment_filename", filename)
             h = sha256()
             h.update(extractedData)
             hashes.add(h.hexdigest())
