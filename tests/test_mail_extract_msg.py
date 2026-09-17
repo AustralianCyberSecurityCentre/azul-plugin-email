@@ -14,10 +14,8 @@ from azul_runner import (
     Event,
     EventData,
     EventParent,
-    Filepath,
     JobResult,
     State,
-    Uri,
     test_template,
 )
 
@@ -62,7 +60,7 @@ class TestExecute(test_template.TestPlugin):
                             ],
                             "mail_agent": [FV("Microsoft Windows Live Mail 16.4.3528.331")],
                             "mail_date": [FV(datetime.datetime(2016, 8, 29, 14, 38, 35))],
-                            "mail_domain": [FV(Uri("pioneercredit.net")), FV(Uri("toinfiniti.com"))],
+                            "mail_domain": [FV(("pioneercredit.net")), FV(("toinfiniti.com"))],
                             "mail_extension_header": [
                                 FV("X-Accept-Language"),
                                 FV("X-Auto-Response-Suppress"),
@@ -132,7 +130,7 @@ class TestExecute(test_template.TestPlugin):
                                 label=DataLabel.PASSWORD_DICTIONARY,
                             ),
                         ],
-                        features={"attachment_filename": [FV(Filepath("complaint_18485.doc"))]},
+                        features={"attachment_filename": [FV("complaint_18485.doc")]},
                     ),
                 ],
                 data={

@@ -5,7 +5,7 @@ import time
 from datetime import datetime
 from email import header, utils
 
-from azul_runner import BinaryPlugin, Feature, FeatureType, FeatureValue, Uri
+from azul_runner import BinaryPlugin, Feature, FeatureType, FeatureValue
 
 
 class AzulPluginMailParser(BinaryPlugin):
@@ -122,7 +122,7 @@ class AzulPluginMailParser(BinaryPlugin):
                     continue
                 dom = addr.split("@")[1]
                 features.setdefault("mail_address", []).append(addr)
-                features.setdefault("mail_domain", []).append(Uri(dom))
+                features.setdefault("mail_domain", []).append((dom))
 
         return features
 

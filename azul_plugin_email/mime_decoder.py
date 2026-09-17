@@ -16,7 +16,6 @@ from azul_runner import (
     DataLabel,
     Feature,
     FeatureType,
-    Filepath,
     Job,
     State,
     add_settings,
@@ -240,7 +239,7 @@ class AzulPluginMimeDecoder(BinaryPlugin):
 
             # set the filename field for the child if it exists
             if content_filename:
-                child_features["filename"] = Filepath(content_filename)
+                child_features["filename"] = str(content_filename)
 
             # raise the decoded mime as a child entity
             c = self.add_child_with_data(
