@@ -300,3 +300,98 @@ class TestExecute(test_template.TestPlugin):
                 },
             ),
         )
+
+    def test_unrecoverable_error(self):
+        """Incomplete OLE mail file - terminal error"""
+        result = self.do_execution(
+            data_in=[
+                (
+                    "content",
+                    self.load_test_file_bytes(
+                        "9368a5c50b953791fa77752b44efe4ea2faae5470fb4553629be2721aa0b8b27",
+                        "VT file that is missing a property stream",
+                    ),
+                )
+            ]
+        )
+        self.assertJobResult(
+            result,
+            JobResult(
+                state=State(State.Label.OPT_OUT, message="Unable to process: File does not contain a property stream.")
+            ),
+        )
+
+    def test_bad_body_bytes(self):
+        """Incomplete OLE mail file - Bad byte in msg body"""
+        result = self.do_execution(
+            data_in=[
+                (
+                    "content",
+                    self.load_test_file_bytes(
+                        "8198812d7bb643109d6d75289606fea7d8abd165ed81617c0478718035242fb2",
+                        "Bad byte in msg body",
+                    ),
+                )
+            ]
+        )
+
+        self.assertEqual(result.state, State(State.Label.COMPLETED))
+
+    def test_missing_attachments(self):
+        """Incomplete OLE mail file - Missing attachments"""
+        result = self.do_execution(
+            data_in=[
+                (
+                    "content",
+                    self.load_test_file_bytes(
+                        "4277010c7816500c96236bd44da5a1f6e0e836c862f63217a2f88629ee5715ea",
+                        "Bad attachments",
+                    ),
+                )
+            ]
+        )
+
+        self.assertEqual(result.state, State(State.Label.COMPLETED_WITH_ERRORS, message="Malformed features found"))
+        self.assertIn("malformed", result.events[0].features)
+        caught_malformed = result.events[0].features["malformed"]
+        expected = str([FV("Unable to access attachments: Guid stream missing from named properties.")])
+        self.assertEqual(str(caught_malformed), expected)
+
+    def test_incorrect_ole_sector(self):
+        """Incomplete OLE mail file - incorrect OLE sector index for empty stream"""
+        result = self.do_execution(
+            data_in=[
+                (
+                    "content",
+                    self.load_test_file_bytes(
+                        "223ea86feea11214f291931284106a2839dd8b1f6d9f6d74498f35e8d582207f",
+                        "incorrect OLE sector index for empty stream",
+                    ),
+                )
+            ]
+        )
+
+        self.assertEqual(result.state, State(State.Label.COMPLETED_WITH_ERRORS, message="Malformed features found"))
+        self.assertIn("malformed", result.events[0].features)
+        caught_malformed = result.events[0].features["malformed"]
+        expected = str([FV("Unable to access attachments: incorrect OLE sector index for empty stream")])
+        self.assertEqual(str(caught_malformed), expected)
+
+    def test_large_fv_value(self):
+        """Msg with an extra big header value"""
+        result = self.do_execution(
+            data_in=[
+                (
+                    "content",
+                    self.load_test_file_bytes(
+                        "96c972d47114445ac917e1aff66bff313460b909eb3de2d129c00c71980123fe",
+                        "Msg with an extra big header value",
+                    ),
+                )
+            ]
+        )
+        self.assertEqual(result.state, State(State.Label.COMPLETED_WITH_ERRORS, message="Malformed features found"))
+        self.assertIn("malformed", result.events[0].features)
+        caught_malformed = result.events[0].features["malformed"]
+        expected = str([FV("feature \'mail_extension_header_value\' has a value of length: 16151 (AQ0CZW4BGOYNaHR0cHM6Ly9ocGlkYy5zaGFyZXBvaW50LmNvbS)")])
+        self.assertEqual(str(caught_malformed), expected)

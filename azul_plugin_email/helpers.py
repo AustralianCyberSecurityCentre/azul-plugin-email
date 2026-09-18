@@ -13,7 +13,9 @@ def get_words(bodies: list[bytes], filename: None | str = None) -> bytes:
     words = set()
     # split the text from the body into words, preserving quoted, space-separated strings
     for b in bodies:
-        for row in csv.reader(b.decode("utf-8").replace("\t", " ").splitlines(), delimiter=" "):
+        for row in csv.reader(
+            b.decode("utf-8", errors="backslashreplace").replace("\t", " ").splitlines(), delimiter=" "
+        ):
             words = words.union((s.strip(",.()[]:;'\" ") for s in row))
     # some phishing says to use the filename as the pw
     if filename:

@@ -32,6 +32,13 @@ class AzulPluginMailParser(BinaryPlugin):
         Feature(name="mail_extension_header_value", desc="Value of header extension field", type=FeatureType.String),
     ]
 
+    def value_check(self, key: str, value: str) -> str:
+        """Method to check and mark values larger than we allow."""
+        if len(value) > self.cfg.max_value_length:
+            self.is_malformed(f"feature '{key}' has a value of length: {len(value)} ({value[:50]})")
+            return value[: self.cfg.max_value_length]
+        return value
+
     def parse_date(self, dstring: str):
         """Given an email timestamp str, convert to a datetime object."""
         features = {}
@@ -74,7 +81,7 @@ class AzulPluginMailParser(BinaryPlugin):
         # X mail headers
         for k, v in msg.items():
             if k.startswith("X-"):
-                val = self.decode_mime_encoded_word(v)
+                val = self.value_check("mail_extension_header_value", self.decode_mime_encoded_word(v))
                 features.setdefault("mail_extension_header", []).append(k)
                 features.setdefault("mail_extension_header_value", []).append(FeatureValue(val, label=k))
 

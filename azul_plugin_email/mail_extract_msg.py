@@ -17,7 +17,7 @@ from extract_msg.attachments.emb_msg_att import EmbeddedMsgAttachment
 from extract_msg.attachments.signed_att import SignedAttachment
 from extract_msg.attachments.unsupported_att import UnsupportedAttachment
 from extract_msg.attachments.web_att import WebAttachment
-from extract_msg.exceptions import UnrecognizedMSGTypeError, UnsupportedMSGTypeError
+from extract_msg.exceptions import StandardViolationError, UnrecognizedMSGTypeError, UnsupportedMSGTypeError
 from extract_msg.msg_classes.appointment import AppointmentMeeting
 from extract_msg.msg_classes.calendar import Calendar
 from extract_msg.msg_classes.contact import Contact
@@ -83,7 +83,7 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
             """
             Attempt to open the file. May fail. Lots of arguments to re-attempt with
             """
-            msg = openMsg(path, delayAttachments=True)
+            msg = openMsg(path, delayAttachments=True, strict=False)
         except UnsupportedMSGTypeError as ex:
             """
             An exception that is raised when an MSG class is recognized but not
@@ -96,6 +96,9 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
             open a specific class of MSG file.
             """
             return State(State.Label.COMPLETED_WITH_ERRORS, message="Unknown MSG type: " + str(ex))
+        except StandardViolationError as ex:
+            """ This case is stated in module docs to be unrecoverable"""
+            return State(State.Label.OPT_OUT, message="Unable to process: " + str(ex))
         except OSError as ex:
             return State(State.Label.COMPLETED_WITH_ERRORS, message="Malformed: " + str(ex))
 
@@ -104,9 +107,12 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
 
         # We double check inside function that msg is of MessageBase
         features = self.parse_msg(msg)  # type: ignore
-
         msg.close()
+
         self.add_many_feature_values(features)
+
+        if "malformed" in self.events[0].features:
+            return State(State.Label.COMPLETED_WITH_ERRORS, message="Malformed features found")
 
     def parse_msg(self, msg: MessageBase) -> dict:
         """Takes a msg object and pulls out features we are interested in."""
@@ -188,7 +194,12 @@ class AzulPluginMailExtractMsg(AzulPluginMailParser):
         self.parse_msg_particulars(msg, features)
 
         # extract any attachments as child entities
-        self.msg_attachment_extracting(msg.attachments, features, extractedBody)
+        try:
+            self.msg_attachment_extracting(msg.attachments, features, extractedBody)
+        except StandardViolationError as ex:
+            self.is_malformed(f"Unable to access attachments: {ex}")
+        except Exception as ex:
+            self.is_malformed(f"Unable to access attachments: {ex}")
 
         return features
 
