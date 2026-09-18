@@ -393,5 +393,11 @@ class TestExecute(test_template.TestPlugin):
         self.assertEqual(result.state, State(State.Label.COMPLETED_WITH_ERRORS, message="Malformed features found"))
         self.assertIn("malformed", result.events[0].features)
         caught_malformed = result.events[0].features["malformed"]
-        expected = str([FV("feature \'mail_extension_header_value\' has a value of length: 16151 (AQ0CZW4BGOYNaHR0cHM6Ly9ocGlkYy5zaGFyZXBvaW50LmNvbS)")])
+        expected = str(
+            [
+                FV(
+                    "feature 'mail_extension_header_value' has a value of length: 16151 (AQ0CZW4BGOYNaHR0cHM6Ly9ocGlkYy5zaGFyZXBvaW50LmNvbS)"
+                )
+            ]
+        )
         self.assertEqual(str(caught_malformed), expected)
